@@ -174,8 +174,9 @@ authorization in the repository's agent instructions before an assistant creates
 Use trusted default-branch code and policy in privileged metadata jobs. Never checkout, install,
 import, or execute fork/PR code, or load PR-provided artifacts/cache as authorization. Give reads
 only read permissions; add `issues: write` for comments or `pull-requests: write` for reviews.
-Run untrusted tests separately without those credentials. The triage package remains outside the
-stdlib-only `check: gate` and tokenless commit Action import graphs.
+Run untrusted tests separately without those credentials. The native Action routes triage,
+gate and tokenless commit checks through their respective dispatchers. The Python gate and
+commit compatibility adapters keep their imports independent of the triage package.
 
 ## Bounds
 
@@ -183,13 +184,13 @@ stdlib-only `check: gate` and tokenless commit Action import graphs.
 | --- | --- |
 | Policy | 64 KiB, schema v1, at most 32 maintainer IDs and 32 bots |
 | Path patterns | 1–64 per list, cumulative matching work capped |
-| Changed files | 500 complete records; filename at most 4096 UTF-8 bytes/64 segments |
+| Changed files | 3000 complete records; filename at most 4096 UTF-8 bytes/64 segments |
 | Reviews/comments | At most 99 each; a full 100-record page fails closed |
 | Review body | 64 KiB; only the exact acceptance marker is interpreted |
 | Duplicate candidates | 0–20 closed PRs, default 5 |
-| API operations | 64 requests, 300 seconds total admission budget |
-| Each `gh` process | 30 seconds, 512 KiB stdout, 64 KiB stderr |
-| Offline snapshot / JSON report | 1 MiB each; 256 retained findings |
+| API operations | 160 requests, 300 seconds total admission budget |
+| Each `gh` process | 30 seconds, 512 KiB stdout (8 MiB for PR file-list pages), 64 KiB stderr |
+| Offline snapshot / JSON report | 8 MiB each; 256 retained findings |
 | Published comment | 16 KiB; existing comment body at most 64 KiB |
 
 These are deliberate fail-closed operating limits. Large or ambiguous PRs require a separate

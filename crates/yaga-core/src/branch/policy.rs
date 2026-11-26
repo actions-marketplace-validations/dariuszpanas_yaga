@@ -1,13 +1,12 @@
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::fs::File;
-use std::io::Read;
 use std::path::Path;
 
-use super::{
-    BranchError, BranchPolicy, LoadedBranchPolicy, MAX_BRANCH_PATTERNS, MAX_BRANCH_POLICY_BYTES,
-};
-use crate::fs::resolve_user_path;
+#[cfg(feature = "process")]
+use super::LoadedBranchPolicy;
+use super::{BranchError, BranchPolicy, MAX_BRANCH_PATTERNS, MAX_BRANCH_POLICY_BYTES};
+#[cfg(feature = "process")]
+use crate::fs::{read_regular_prefix, resolve_user_path};
 use crate::version::{REQUIREMENT_TYPE_ERROR, check_requirement};
 
 pub(super) fn path_text(path: &Path) -> Cow<'_, str> {
@@ -116,6 +115,7 @@ pub fn parse_branch_table(document: &toml::Table, path: &str) -> Result<BranchPo
 }
 
 /// Read one explicit, bounded policy file and retain its resolved path.
+#[cfg(feature = "process")]
 pub fn load_branch_policy(path: &Path) -> Result<LoadedBranchPolicy, BranchError> {
     let path = resolve_user_path(path).map_err(|_| {
         let path = path_text(path);
@@ -125,15 +125,9 @@ pub fn load_branch_policy(path: &Path) -> Result<LoadedBranchPolicy, BranchError
             super::DisplayField::Safe.render(&label, 300)
         ))
     })?;
-    let mut bytes = Vec::new();
-    File::open(&path)
-        .and_then(|file| {
-            file.take(MAX_BRANCH_POLICY_BYTES as u64 + 1)
-                .read_to_end(&mut bytes)
-        })
-        .map_err(|_| {
-            BranchError::Configuration(format!("cannot read branch policy {}", display_path(&path)))
-        })?;
+    let bytes = read_regular_prefix(&path, MAX_BRANCH_POLICY_BYTES).map_err(|_| {
+        BranchError::Configuration(format!("cannot read branch policy {}", display_path(&path)))
+    })?;
     let policy = parse_branch_policy(&bytes, &path)?;
     Ok(LoadedBranchPolicy { policy, path })
 }

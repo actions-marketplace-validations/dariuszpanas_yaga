@@ -6,16 +6,31 @@ Deterministic Git, commit, pull-request, workflow, test-planning, and repository
 
 ## Installation
 
+Install the published `0.6` release from crates.io:
+
 ```toml
 [dependencies]
 yaga-core = "0.6"
 ```
 
-Optional Cargo features:
+On unreleased `main` (planned for `0.7`; not present in published `0.6.0`), pure in-memory policy
+evaluation (without filesystem, subprocess, or OS-FFI dependencies) disables the default `process`
+feature and exposes byte-slice policy auditors (`policies::classify_bytes`,
+`policies::audit_bytes`, `policies::audit_entries`) plus non-filesystem plan helpers
+(`RepositoryPlan::relative_policy_paths`, `RepositoryPlan::relative_workflow_paths`):
 
-- `github-http`: bounded GitHub API HTTP transport (`ureq` with `rustls`)
-- `quality-http`: hosted OpenAI / Anthropic / Gemini / OpenAI-compatible commit quality clients
-- `quality-bedrock`: Amazon Bedrock Converse commit quality client
+```toml
+[dependencies]
+# Unreleased `main` (planned for 0.7; not available in published 0.6.0):
+yaga-core = { git = "https://github.com/dariuszpanas/yaga", default-features = false }
+```
+
+Cargo features:
+
+- `process` (enabled by default on `main` / upcoming `0.7`; always enabled in published `0.6.0`): filesystem helpers, shell-free `git`/`gh`/`typos`/`docker` runners, policy discovery/init, and shell completions
+- `github-http`: bounded GitHub API HTTP transport (`ureq` with `rustls`; implies `process`)
+- `quality-http`: hosted OpenAI / Anthropic / Gemini / OpenAI-compatible commit quality clients (implies `process`)
+- `quality-bedrock`: Amazon Bedrock Converse commit quality client (implies `process`)
 
 ## Example
 

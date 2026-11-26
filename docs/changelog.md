@@ -2,6 +2,67 @@
 
 ## [Unreleased]
 
+### Added
+
+- Add an optional default `process` Cargo feature in `yaga-core` so pure in-memory Rust consumers
+  can depend on `yaga-core = { default-features = false }` without compiling filesystem,
+  subprocess, or OS-FFI crates (`git`, `gh`, `actionlint`, `typos`, `tempfile`, `libc`, `rustix`,
+  `win32job`, `windows-sys`). Default `yaga-core` behavior is unchanged.
+
+- Add pure byte-slice policy classification and auditing helpers (`policies::classify_bytes`,
+  `policies::audit_bytes`, `policies::audit_entries`) and re-export `policies::AuditEntry` (plus
+  keep `policies::render_starter` available without `process`) so callers can validate in-memory
+  policy bytes with the same schema and byte-limit checks as `audit_policies`.
+
+- Derive or implement `serde::Serialize` consistently across pure evaluator report and diagnostic
+  types in `yaga-core` (`branch::BranchReport`, `descriptions::Report`, `paths::changes`,
+  `paths::modes`, `paths::portability`, `paths::records`, `paths::sizes`, `paths::tree`,
+  `policies::AuditEntry`, `policies::AuditReport`, `repository::Provider`, and `workflows`).
+
+- Add `RepositoryPlan::relative_policy_paths()` and `RepositoryPlan::relative_workflow_paths()`
+  in `yaga-core::repository` to validate and return canonical POSIX repository-relative paths
+  without touching the local filesystem.
+
+- Support optional per-variant targeting in `test-policy.toml` (`test-policy-version = 1`) via
+  `select-variants` on `[[rules]]` and `always-variants` on `[profiles.<name>]`. Rules union
+  targeted variants deterministically, whole-suite selection and `full` mode/fallback expand to
+  all declared variants, suite-level `needs` prerequisites retain all declared variants, and
+  `test evaluate` / `create_handoff` enforce exact selected cells while keeping existing v1 plans
+  byte-identical. See [Test planning](test-planning.md).
+
+### Security
+
+- Disable `aws-sdk-bedrockruntime`'s legacy `rustls` default feature in `yaga-core` (`quality-bedrock`)
+  and use `default-https-client` (`hyper` 1.x + `rustls` 0.23) exclusively, removing legacy
+  `rustls 0.21` and `rustls-webpki 0.101` from `Cargo.lock`.
+
+- Resolve `typos` through `git::external_executable` so relative `PATH` entries and repository-local
+  executables are rejected consistently with `git`, `gh`, `docker`, and `cargo`, and enforce
+  nonblocking regular-file guards (`read_regular_prefix`) on explicit commit, branch, repository
+  plan, and Agent review policy files.
+
+### Fixed
+
+- Fix CLI usage errors for short value-taking flags missing arguments (`-m`, `-F`, `-c`, `-r`),
+  missing arguments followed by another flag, and float/non-integer flag parse failures (such as
+  `commit quality --threshold`).
+
+- Resolve symlinks and `~` home paths consistently for `pull-request triage check --file`,
+  `test evaluate` JSON inputs, `review::Snapshot::load`, and native `yaga self update` receipts.
+
+- Include `diagnostics_omitted` for `size` and `tree` providers in `repo check --format github`
+  omitted-diagnostic summaries, report `pull-request triage` context in triage `gh` transport errors,
+  and append newer-schema upgrade hints for `TestPolicy` and `TriagePolicy`.
+
+- Validate Bedrock Converse `stop_reason` (`end_turn` / `stop_sequence`) and skip reasoning content
+  blocks before reading the decision text; tolerate small backward wall-clock skew in `__action gate`
+  setup timing and align `gate` operational/input errors to exit code `2`.
+
+- Gate `commits::global_config_path()` under `#[cfg(feature = "process")]`, fix ISO-8601 timezone
+  offset bounds and `+00:00.5` fractional offsets, honor `--` in shell completion, render short flags
+  in dynamic help tables, treat empty `NO_COLOR=""` consistently in `policy init`, refresh `self
+  update` help/error wording, and resolve Cargo's `redundant_homepage` warning in `yaga-cli`.
+
 ## [0.6.0] - 2026-11-24
 
 ### Added

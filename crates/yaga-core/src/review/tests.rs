@@ -1,8 +1,9 @@
-use super::{Snapshot, evaluate, in_progress, remote};
-use crate::{
-    agent_review::{Outcome, Policy},
-    gh::PullRequest,
-};
+#[cfg(feature = "process")]
+use super::remote;
+use super::{Snapshot, evaluate, in_progress};
+use crate::agent_review::{Outcome, Policy};
+#[cfg(feature = "process")]
+use crate::gh::PullRequest;
 use serde_json::{Value, json};
 use std::path::Path;
 
@@ -126,6 +127,7 @@ fn rejects_duplicate_json_incomplete_pages_and_plan_changes() {
     );
 }
 
+#[cfg(feature = "process")]
 #[test]
 fn remote_collection_authenticates_identity_before_reading_evidence() {
     let p = policy();
@@ -140,4 +142,21 @@ fn remote_collection_authenticates_identity_before_reading_evidence() {
         "gh returned a different pull-request identity"
     );
     assert_eq!(reads, ["repos/owner/repo/pulls/7"]);
+}
+
+#[cfg(feature = "process")]
+#[test]
+fn snapshot_load_resolves_symlinks_and_rejects_directories() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = policy();
+    let snap = dir.path().join("snap.json");
+    std::fs::write(&snap, document(&p).to_string()).unwrap();
+    assert_eq!(Snapshot::load(&snap).unwrap().number(), 7);
+    assert!(Snapshot::load(dir.path()).is_err());
+    #[cfg(unix)]
+    {
+        let link = dir.path().join("link.json");
+        std::os::unix::fs::symlink(&snap, &link).unwrap();
+        assert_eq!(Snapshot::load(&link).unwrap().number(), 7);
+    }
 }
